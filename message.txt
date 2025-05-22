@@ -1,0 +1,430 @@
+Angular Projekt Létrehozása + Bootstrap Telepítése
+
+1. Angular CLI Telepítése (ha még nincs)
+	npm install -g @angular/cli
+
+2. Új Angular Projekt Létrehozása
+	ng new projekt-neve
+
+Kérdésekre adott javasolt válaszok:
+	Would you like to add Angular routing? → yes vagy no igény szerint.
+	Which stylesheet format would you like to use? → válaszd: CSS vagy SCSS, ahogy szeretnéd.
+
+3. Projekt Könyvtárba Lépés
+	cd projekt-neve
+
+🎨 Bootstrap Telepítése Angular Projektbe
+🔹 1. Bootstrap Telepítése az npm segítségével
+	npm install bootstrap
+🔹 2. Bootstrap Importálása a angular.json fájlban
+	Nyisd meg az angular.json fájlt, és keresd meg az alábbi részt:
+
+Angular.json:
+
+"styles": [
+  "src/styles.css"
+],
+"scripts": []
+Majd módosítsd így (útvonal a node_modules könyvtárban):
+
+"styles": [
+  "node_modules/bootstrap/dist/css/bootstrap.min.css",
+  "src/styles.css"
+],
+"scripts": [
+  "node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"
+]
+🔔 Megjegyzés: Ha SCSS-t használsz, a styles.css helyett styles.scss lesz.
+
+🚀 Projekt Futtatása
+	ng serve
+
+
+//projekt megnyitása
+cd .... ----> code .
+
+//Komponensek Létrehozása
+ng g c show-estates
+ng g c landing-page
+ng g c new-ad
+
+//szolgáltatás service Létrehozása
+ng g s api
+
+//commandba
+ng add @angular/material <-kell pl mattable-hez
+
+
+
+src/app/landing-page:
+landing-page.component.html:
+----------------------------------------------------------
+<div class="container">
+    <div class="start w-100">
+        <h1 class="text-center pt-2 pt-lg-4">Á.L.B. Ingatlanügynöség</h1>
+        <div class="row">
+            <div class="col-12 col-sm-6 text-center">
+                <a class="btn btn-primary" [routerLink]="['/offers']">Nézze meg kínálatunkat!</a>
+            </div>
+            <div class="col-12 col-sm-6 text-center">
+                <a class="btn btn-primary" [routerLink]="['/newad']">Hirdessen nálunk!</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+landing-page.component.ts:
+----------------------------------------------------------
+import { Component } from '@angular/core';
+import { RouterModule } from '@angular/router';
+
+@Component({
+  selector: 'app-landing-page',
+  imports: [RouterModule],
+  standalone: true,
+  templateUrl: './landing-page.component.html',
+  styleUrl: './landing-page.component.css'
+})
+export class LandingPageComponent {
+
+}
+
+
+
+new-ad:
+new-ad.component.html:
+----------------------------------------------------------
+<div class="container">
+    <h2 class="mb-4 text-center">Új hirdetés elküldése</h2>
+    <div class="row">
+        <div class="offset-lg-3 offset-md-2 col-lg-6 col-md-8 col-12">
+            <form [formGroup]="adForm" (ngSubmit)="onSubmit()">
+                <div class="mb-3">
+                    <label for="category" class="form-label">Ingatlan kategóriája</label>
+                    <select class="form-select" formControlName="kategoriaId">
+                        <option value="0">Kérem válasszon</option>
+                        <option *ngFor="let category of categories" [value]="category.id">{{ category.megnevezes }}</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="date" class="form-label">Hirdetés dátuma</label>
+                    <input type="date" class="form-control" formControlName="hirdetesDatuma" readonly>
+                </div>
+                <div class="mb-3">
+                    <label for="description" class="form-label">Ingatlan leírása</label>
+                    <textarea class="form-control" formControlName="leiras" rows="3"></textarea>
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" formControlName="tehermentes">
+                    <label class="form-check-label" for="creditFree">Tehermentes ingatlan</label>
+                </div>
+                <div class="mb-3">
+                    <label for="pictureUrl" class="form-label">Fénykép az ingatlanról</label>
+                    <input type="url" class="form-control" formControlName="kepUrl">
+                </div>
+                <div class="mb-3 text-center">
+                    <button type="submit" class="btn btn-primary px-5" [disabled]="!adForm.valid">Küldés</button>
+                </div>
+
+                <div class="alert alert-danger alert-dismissible" role="alert" *ngIf="errorMessage">
+                    <strong>{{ errorMessage }}</strong>
+                    <button type="button" class="btn-close" (click)="errorMessage = ''"></button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+
+new-ad.component.ts:
+----------------------------------------------------------
+import { Component, OnInit } from '@angular/core';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ApiService } from '../api.service';
+import { Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
+
+@Component({
+  selector: 'app-new-ad',
+  standalone: true,
+  imports: [
+    CommonModule,
+    ReactiveFormsModule
+  ],
+  templateUrl: './new-ad.component.html',
+  styleUrl: './new-ad.component.css'
+})
+export class NewAdComponent implements OnInit {
+  adForm!: FormGroup;
+  categories: any[] = [];
+  errorMessage: string = '';
+  
+  constructor(
+    private formBuilder: FormBuilder,
+    private apiService: ApiService,
+    private router: Router
+  ) { }
+
+  ngOnInit(): void {
+    this.loadCategories();
+    this.initForm();
+  }
+
+  loadCategories(): void {
+    this.apiService.getCategories().subscribe({
+      next: (data) => {
+        this.categories = data;
+      },
+      error: (error) => {
+        console.error('Kategóriák betöltése sikertelen', error);
+        this.errorMessage = 'Nem sikerült betölteni a kategóriákat!';
+      }
+    });
+  }
+
+  initForm(): void {
+    const today = new Date().toISOString().split('T')[0];
+    
+    this.adForm = this.formBuilder.group({
+      kategoriaId: ['', Validators.required],
+      leiras: ['', [Validators.required, Validators.minLength(20)]],
+      hirdetesDatuma: [today, Validators.required],
+      tehermentes: [true], // Bejelölve alapértelmezetten
+      kepUrl: ['', Validators.required]
+    });
+  }
+
+  onSubmit(): void {
+    if (this.adForm.valid) {
+      this.apiService.addNewEstate(this.adForm.value).subscribe({
+        next: () => {
+          this.router.navigate(['/offers']);
+        },
+        error: (error) => {
+          console.error('Hirdetés feladása sikertelen', error);
+          this.errorMessage = 'Hiba történt a hirdetés feladása során. Kérjük, próbálja újra!';
+        }
+      });
+    } else {
+      this.errorMessage = 'Kérjük, töltse ki megfelelően az összes kötelező mezőt!';
+    }
+  }
+}
+
+
+
+
+
+
+
+show-estates:
+show-estates.component.html:
+----------------------------------------------------------
+<h1 class="text-center">Ajánlataink</h1>
+<table mat-table [dataSource]="dataSource" class="mat-elevation-z8">
+
+    <!-- Position Column -->
+    <ng-container matColumnDef="category">
+      <th mat-header-cell *matHeaderCellDef> Kategória </th>
+      <td mat-cell *matCellDef="let element"> {{element.kategoria?.megnevezes || 'N/A'}} </td>
+    </ng-container>
+
+    <!-- Name Column -->
+    <ng-container matColumnDef="desc">
+      <th mat-header-cell *matHeaderCellDef> Leírás </th>
+      <td mat-cell *matCellDef="let element"> {{element.leiras}} </td>
+    </ng-container>
+
+    <!-- Weight Column -->
+    <ng-container matColumnDef="ad_date">
+      <th mat-header-cell *matHeaderCellDef> Hirdetés dátuma </th>
+      <td mat-cell *matCellDef="let element"> {{element.hirdetesDatuma}} </td>
+    </ng-container>
+
+    <!-- Symbol Column -->
+    <ng-container matColumnDef="free">
+      <th mat-header-cell *matHeaderCellDef> Tehermentes </th>
+      <td mat-cell *matCellDef="let element"> {{element.tehermentes ? 'Igen' : 'Nem'}} </td>
+    </ng-container>
+
+    <ng-container matColumnDef="picture">
+      <th mat-header-cell *matHeaderCellDef> Kép </th>
+      <td mat-cell *matCellDef="let element">
+        <img *ngIf="element.kepUrl" [src]="element.kepUrl" style="max-width: 100px; max-height: 100px;">
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+</table>
+
+
+
+
+show-estates.component.ts:
+----------------------------------------------------------
+
+import { Component, OnInit } from '@angular/core';
+import { ApiService } from '../api.service';
+import { MatTableModule } from '@angular/material/table';
+
+export interface Kategoria {
+  id: number;
+  megnevezes: string;
+}
+
+export interface EstateElement {
+  id: number;
+  kategoriaId: number;
+  kategoria: Kategoria;
+  leiras: string;
+  hirdetesDatuma: string;
+  tehermentes: boolean;
+  kepUrl: string;
+}
+
+@Component({
+  selector: 'app-show-estates',
+  standalone: true,
+  imports: [MatTableModule],
+  templateUrl: './show-estates.component.html',
+  styleUrl: './show-estates.component.css'
+})
+export class ShowEstatesComponent implements OnInit {
+  estates: EstateElement[] = [];
+  
+  displayedColumns: string[] = ['category', 'desc', 'ad_date', 'free', 'picture'];
+  dataSource: EstateElement[] = [];
+
+  constructor(private service: ApiService) { }
+
+  ngOnInit() {
+    this.service.getEstates().subscribe({
+      next: (data: any) => {
+        this.estates = data;
+        this.dataSource = this.estates;
+        console.log(this.estates);
+      },
+      error: (error) => {
+        console.error('Failed to load estates', error);
+      }
+    });
+  }
+}
+
+
+
+api.service.ts:
+----------------------------------------------------------
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class ApiService {
+  private baseUrl = 'http://localhost:5000';
+
+  constructor(
+    private http: HttpClient
+  ) { }
+
+  getEstates() {
+    return this.http.get(this.baseUrl + '/api/ingatlan');
+  }
+
+  getCategories(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/api/kategoriak`);
+  }
+
+  addNewEstate(estate: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}/api/ujingatlan`, estate);
+  }
+}
+
+
+app.component.html(mindent törölsz ami benne volt alapból):
+----------------------------------------------------------
+<router-outlet></router-outlet>
+
+
+app.component.ts:
+----------------------------------------------------------
+import { Component } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
+
+@Component({
+  selector: 'app-root',
+  standalone: true,
+  imports: [RouterOutlet],
+  templateUrl: './app.component.html',
+  styleUrl: './app.component.css'
+})
+export class AppComponent {
+  title = 'Pataky_Zsolt';
+}
+
+
+app.config.ts:
+----------------------------------------------------------
+import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
+import { provideRouter } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
+
+import { routes } from './app.routes';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideZoneChangeDetection({ eventCoalescing: true }),
+    provideRouter(routes),
+    provideHttpClient()
+  ]
+};
+
+
+
+app.routes.ts:
+----------------------------------------------------------
+import { Routes } from '@angular/router';
+import { ShowEstatesComponent } from './show-estates/show-estates.component';
+import { NewAdComponent } from './new-ad/new-ad.component';
+import { LandingPageComponent } from './landing-page/landing-page.component';
+
+export const routes: Routes = [
+    {
+        path: '', component: LandingPageComponent
+    },
+    {
+        path: 'offers', component: ShowEstatesComponent
+    },
+    {
+        path: 'newad', component: NewAdComponent
+    }
+];
+
+
+index.html(nem biztos kell változtatni):
+----------------------------------------------------------
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Realestate</title>
+  <base href="/">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+  <app-root></app-root>
+</body>
+</html>
+
+
+
+terminál vagy cmd: ng serve --open
