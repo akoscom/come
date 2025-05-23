@@ -1,0 +1,155 @@
+1. project létrehozás:
+laravel new app-name
+
+2. Adatbázis létrehozás PHPMyAdmin
+
+3. Környezet beállítása (.env)
+DB_DATABASE név megadása
+
+4. Modellek létrehozása
+php artisan make:model -m Kategoria
+
+5. Sanctum eltávolítása
+composer remove laravel/sanctum
+config/sanctum.php törlése
+
+5. Migrálás beállítása
+database/migrations/kapcsolódó fájl
+-----------------------------------
+public function up() {
+	Schema::create('kategoriak', function (Blueprint $table) {
+		$table->id();
+		$table->string('nev')->unique();
+	});
+}
+
+public function down() {
+	Schema::dropIfExists('kategoriak');
+}
+
+
+Controller: Models/Kategoria.php
+--------------------------------
+…
+	use HasFactory;
+	public $table = 'kategoriak';
+	public $timestamps = false;
+	
+
+php artisan make:model -mc --api Ingatlan
+
+Migráció...ingatlans.table.php
+----------------------
+public function up() {
+	Schema::create('ingatlanok', function (Blueprint $table) {
+		$table->id();
+		$table->foreignId('kategoria')->references('id')->on('kategoriak');
+		$table->string('leiras')->nullable();
+		$table->date('hirdetesDatuma')->nullable()->default(DB::raw('CURRENT_TIMESTAMP'));
+		$table->boolean('tehermentes');
+		$table->integer('ar');
+		$table->string('kepUrl')->nullable();
+}
+public function down() {
+	Schema::dropIfExists('ingatlanok');
+}
+
+Controller: Models/Ingatlan.php
+…
+	use HasFactory;
+	public $table = 'ingatlanok';
+	public $timestamp = false;
+
+6. Migrálási adatok feltöltése
+
+database/seeders/DatabaseSeeders.php
+------------------------------------
+public function run() {
+	$kategoriak = ['...'];
+	foreach ($kategoriak as $key => $value) {
+		Kategoria::create(['nev' => $value]);
+	}
+}
+
+php artisan migrate --seed
+
+7. adatkapcsolat beállítása
+Ingatlan.php
+------------
+public function kategoria()
+{
+	return $this->belongsTo(Kategoria::class, 'kategoria');
+}
+8. Útvonal beállítása összes ingatlan megjelenítésére
+routes/api.php
+--------------
+Route::get('/ingatlan', [IngatlanController::class, 'index']);
+
+Controllers/IngatlanController.php
+----------------------------------
+Public function index() {
+	//return Ingatlan::all();
+	return Ingatlan:with('kategoria')->get();
+}
+
+POSTMAN
+php artisan serve
+
+Collections/… New Collection -> Backend teszt
+Backend teszt / … New request -> Request name
+GET http://127.0.0.1:8000/api/ingatlan
+
+9. Útvonal beállítás tárolásra
+routes/api.php
+--------------
+
+Route::post('/ingatlan',[IngatlanController::class, 'store']);
+
+IngatlanController.php
+----------------------
+public function store(Request $request) {
+	//Supportos Validator kell hozzá
+	$validator = Validator::make($request->all(),
+	[
+		'kategoria' => 'required',
+		'tehermentes' => 'required',
+		'ar' => 'required'
+	])
+
+	if ($validator->fails()){
+		return response()->json(['message' => 'Hiányos adatok'],400);
+
+	$ingatlan = Ingatlan::create($request->all());
+	return response()->json(['id' => $ingatlan->$id],201);
+	}
+	
+}
+
+POSTMAN
+Create Ingatlan teszt
+
+10. Útvonal törléshez
+routes/api.php
+--------------
+Route::delete('/ingatlan/{id}', ['IngatlanController::class, 'destroy']);
+
+IngatlanController.php
+----------------------
+public function destroy($id)
+{
+	$ingatlan = Ingatlan::where('id', '=', $id);
+
+	if ($ingatlan->exists())
+	{
+		$ingatlan->delete();
+		return response('', 204);
+
+	}
+	return response('Az ingatlan nem létezik,',404);
+}
+
+POSTMAN tESZt
+
+11. exportálás
+Postman/Export
+mysql export
